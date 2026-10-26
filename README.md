@@ -30,6 +30,8 @@ uv run pytest -q
 uv run python -m app.ask "LoRAとは何ですか？"
 ```
 
+回答後は続けて質問を入力できます。前の質問と回答の履歴を保ったまま会話し、終了するときは `finish` と入力してください。
+
 詳しい手順は [lectures/01/problem.md](lectures/01/problem.md) を見てください。
 
 ## 構成
@@ -39,7 +41,7 @@ uv run python -m app.ask "LoRAとは何ですか？"
 .github/workflows/test.yml  PR ごとにテストを実行（fork では Actions タブで有効化が必要）
 app/
   config.py      モデル名とAPIキーの読み込み
-  ask.py         第1回：LLMに質問する
+  ask.py         第1回：会話履歴を保ってLLMに質問する（finish で終了）
   tools.py       第3回：エージェントのツール（用語集の検索など）
   agent.py       第3回：Pydantic AI の学習支援エージェント（第5回：--mcp で MCP 経由）
   mcp_server.py  第5回：用語集を公開する MCP サーバー
@@ -86,5 +88,7 @@ pyproject.toml / uv.lock  依存パッケージとその固定版
 ```bash
 AIE_MODEL=gemini-3.5-flash uv run python -m app.ask "LoRAとは何ですか？"
 ```
+
+最初の回答後も会話履歴を保って追加で質問でき、`finish` と入力すると終了します。
 
 無料枠には1分あたり・1日あたりのリクエスト上限があります。上限は [Gemini API のレート制限のページ](https://ai.google.dev/gemini-api/docs/rate-limits) で確認してください。
