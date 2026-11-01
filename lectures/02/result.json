@@ -1,0 +1,76 @@
+{
+  "config": {
+    "base_model": "Qwen/Qwen3.5-0.8B",
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "seed": 42,
+    "num_train_epochs": 20,
+    "warmup_steps": 6,
+    "lr": 0.0002,
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "max_seq_len": 512,
+    "max_new_tokens": 96,
+    "gen": {
+      "do_sample": false
+    }
+  },
+  "versions": {
+    "transformers": "5.18.0",
+    "peft": "0.21.1",
+    "trl": "1.14.2",
+    "torch": "2.11.0+cu130"
+  },
+  "method": "LoRA（量子化なし）",
+  "before": {
+    "label": "before",
+    "n": 28,
+    "format_rate": 0.42857142857142855,
+    "content_rate": 0.2857142857142857,
+    "both_rate": 0.2857142857142857,
+    "seconds": 30.3
+  },
+  "after": {
+    "label": "after",
+    "n": 28,
+    "format_rate": 1.0,
+    "content_rate": 0.8571428571428571,
+    "both_rate": 0.8571428571428571,
+    "seconds": 57.9
+  },
+  "regressed": [],
+  "knowledge": [
+    {
+      "質問": "この講座の最終課題の締切はいつですか",
+      "FAQ にある": false,
+      "学習前の分類": "format_error",
+      "学習前の出力": "{\"answer\": \"確認が必要\"}",
+      "学習後の分類": "needs_review",
+      "学習後の出力": "{\"answer\": \"この FAQ には記載がありません。教員に確認が必要です。\", \"needs_review\": true}"
+    },
+    {
+      "質問": "担当教員の名前は何ですか",
+      "FAQ にある": false,
+      "学習前の分類": "format_error",
+      "学習前の出力": "{\"answer\": \"確認が必要\"}",
+      "学習後の分類": "needs_review",
+      "学習後の出力": "{\"answer\": \"この FAQ には記載がありません。教員を明記した参照箇所の画像ファイルを添付してください。\", \"needs_review\": true}"
+    },
+    {
+      "質問": "次回の講義のテーマは何ですか",
+      "FAQ にある": false,
+      "学習前の分類": "format_error",
+      "学習前の出力": "{\"answer\": \"次回の講義のテーマは「授業日 2 日前の土曜日に公開された教材の公開終了は授業日翌日の火曜日です。小テストの公開は授業日前日の日曜日に、小テストの公開終了は授業日の 2 日後の水曜日です。PDFファイルまたは PDF に変換可能なファイルを提出してください。出典を明記した参照箇所の画像ファイルを添付してください。\"}",
+      "学習後の分類": "needs_review",
+      "学習後の出力": "{\"answer\": \"この FAQ には記載がありません。教員に確認が必要です。\", \"needs_review\": true}"
+    },
+    {
+      "質問": "教材の公開はいつですか",
+      "FAQ にある": false,
+      "学習前の分類": "asserted",
+      "学習前の出力": "{\"answer\": \"授業日の 2 日前の土曜日\", \"needs_review\": false}",
+      "学習後の分類": "asserted",
+      "学習後の出力": "{\"answer\": \"教材の公開は授業日の 2 日前の土曜日です。\", \"needs_review\": false}"
+    }
+  ],
+  "executed_training_myself": true
+}
