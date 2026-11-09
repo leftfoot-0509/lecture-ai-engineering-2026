@@ -5,10 +5,13 @@
 """
 
 import json
+import random
+from datetime import datetime
 from functools import cache
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+LEARNING_LOG_DIR = Path(__file__).resolve().parent.parent / "learning_log"
 MAX_RESULTS = 3
 
 
@@ -77,3 +80,53 @@ def get_lecture_summary(lecture: int) -> str:
         available = sorted(p.stem for p in (DATA_DIR / "lectures").glob("*.md"))
         return f"第{lecture}回の要点はまだありません。用意されている回: {', '.join(available)}"
     return path.read_text(encoding="utf-8")
+
+
+def make_quiz(lecture: int) -> str:
+    """指定した回（1始まりの整数）の用語から1つ選び、確認問題と答えを返す。
+
+    「第3回の確認問題を出して」のように、確認問題の作成を求められたときに使う。
+    """
+    terms = [term for term in load_glossary() if term["lecture"] == lecture]
+    if not terms:
+        return f"第{lecture}回の用語が用語集にありません。"
+
+    term = random.choice(terms)
+    return json.dumps(
+        {
+            "question": f"「{term['term']}」の意味は？",
+            "answer": term["definition"],
+        },
+        ensure_ascii=False,
+    )
+
+
+def save_learning_log() -> str:
+    """必要な他のツールを使い終えた後、回答前の最後のツールとして必ず呼び出す。
+
+    利用者が保存を頼んでいない場合も呼び出す。このツール自体はファイルを書き込まず、
+    回答後に利用者へ保存を確認する。
+    """
+    return "回答の後に利用者へ保存を確認します。"
+
+
+def write_learning_log(
+    user_input: str, llm_answer: str, tool_returns: list[dict[str, object]]
+) -> Path:
+    """利用者の入力、LLMの回答、ツールの戻り値を学習記録として保存する。"""
+    LEARNING_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    now = datetime.now().astimezone()
+    timestamp = now.strftime("%Y%m%dT%H%M%S")
+    path = LEARNING_LOG_DIR / f"{timestamp}.json"
+    content = {
+        "timestamp": timestamp,
+        "user_input": user_input,
+        "llm_answer": llm_answer,
+        "tool return": tool_returns,
+    }
+
+    with path.open("x", encoding="utf-8") as f:
+        json.dump(content, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+    return path

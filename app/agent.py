@@ -35,14 +35,18 @@ INSTRUCTIONS = """\
 - 用語集に見つからないことは、推測で断定せず「用語集にはない」と伝える。
 - 回答の最後に、関係する回（第N回）を示す。
 - 宿題の答えそのものは書かず、考え方のヒントで導く。
+- 確認問題の作成を頼まれたら make_quiz を使う。
+- 利用者が保存を頼んだかどうかにかかわらず、毎回 save_learning_log を呼ぶ。
+- save_learning_log は、必要な他のツールをすべて使い終えた後、回答前の最後のツール呼び出しとして使う。
+- save_learning_log を呼んだ後に最終回答を返す。保存の確認は回答後に行われる。
 """
 
 # モデルは実行時に渡す（テストではAPIを呼ばない TestModel に差し替えるため）
-agent = Agent(instructions=INSTRUCTIONS)
+agent = Agent(instructions=INSTRUCTIONS, output_type=str)
 agent.tool_plain(tools.search_glossary)
 agent.tool_plain(tools.get_lecture_summary)
-
-# TODO(第3回 演習): tools.py に make_quiz を作り、ここで登録しよう
+agent.tool_plain(tools.make_quiz)
+agent.tool_plain(tools.save_learning_log)
 
 # 第5回: 使う MCP サーバーの設定ファイル。Claude Desktop や Cursor と同じ "mcpServers" 形式
 MCP_CONFIG = Path(__file__).resolve().parent / "mcp_servers.json"
@@ -128,11 +132,23 @@ def main() -> None:
     if args.mcp:
         print("[tools] MCP サーバー（app/mcp_servers.json）")
     try:
-        result = target.run_sync(args.question, model=build_model())
+        model = build_model()
+        result = target.run_sync(args.question, model=model)
     except ModelHTTPError as e:
         print(api_error_message(e.status_code, str(e.body)[:200]))
         raise SystemExit(1)
     print(result.output)
+    answer = input("このやりとりを learning_log/ に保存しますか？ [y/N]: ").strip()
+    if answer == "y":
+        tool_returns = [
+            {"tool_name": part.tool_name, "content": part.content}
+            for message in result.all_messages()
+            for part in message.parts
+            if isinstance(part, ToolReturnPart)
+            and part.tool_name != "save_learning_log"
+        ]
+        path = tools.write_learning_log(args.question, result.output, tool_returns)
+        print(f"やりとりを learning_log/{path.name} に保存しました。")
     if args.trace:
         print_trace(result)
 
