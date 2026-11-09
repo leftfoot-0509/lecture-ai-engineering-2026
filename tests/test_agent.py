@@ -7,11 +7,10 @@ TestModel は実際のLLMを呼ばない偽モデルで、登録されたツー�
 
 import json
 
-from pydantic_ai import DeferredToolRequests
 from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 from pydantic_ai.models.test import TestModel
 
-from app.agent import agent
+from app.agent import INSTRUCTIONS, agent
 
 BASE_TOOLS = {"search_glossary", "get_lecture_summary"}
 
@@ -30,9 +29,7 @@ def test_base_tools_are_registered_and_called():
 
     called = {p.tool_name for p in _parts(result, ToolCallPart)}
     assert BASE_TOOLS <= called
-    # 承認が必要なツール（requires_approval=True）は、実行されずに承認待ちになるので戻り値が無い
-    waiting = len(result.output.approvals) if isinstance(result.output, DeferredToolRequests) else 0
-    assert len(_parts(result, ToolReturnPart)) + waiting == len(_parts(result, ToolCallPart))
+    assert len(_parts(result, ToolReturnPart)) == len(_parts(result, ToolCallPart))
     assert result.output
 
 
@@ -56,32 +53,70 @@ def test_make_quiz_is_registered_and_called():
     assert calls and returns
 
 
-def test_learning_log_is_saved_only_after_approval(tmp_path, monkeypatch):
+def test_learning_log_is_saved_only_after_post_response_approval(
+    tmp_path, monkeypatch, capsys
+):
     from app import agent as agent_module, tools
 
     monkeypatch.setattr(tools, "LEARNING_LOG_DIR", tmp_path)
-    model = TestModel(call_tools=["save_learning_log"], custom_output_text="完了")
+    model = TestModel(
+        call_tools=["search_glossary", "save_learning_log"],
+        custom_output_text="完了",
+    )
     monkeypatch.setattr(agent_module, "build_model", lambda: model)
-    monkeypatch.setattr("builtins.input", lambda _: "y")
-    monkeypatch.setattr("sys.argv", ["app.agent", "このやりとりを保存して"])
+
+    def approve_after_response(prompt):
+        assert "完了" in capsys.readouterr().out
+        assert "保存しますか" in prompt
+        return "y"
+
+    monkeypatch.setattr("builtins.input", approve_after_response)
+    monkeypatch.setattr("sys.argv", ["app.agent", "RAGとは？"])
 
     agent_module.main()
 
     logs = list(tmp_path.glob("*.json"))
     assert len(logs) == 1
-    saved_messages = json.loads(logs[0].read_text(encoding="utf-8"))
-    assert "このやりとりを保存して" in logs[0].read_text(encoding="utf-8")
-    assert "save_learning_log" in logs[0].read_text(encoding="utf-8")
-    assert saved_messages
+    saved_log = json.loads(logs[0].read_text(encoding="utf-8"))
+    assert set(saved_log) == {"timestamp", "user_input", "llm_answer", "tool return"}
+    assert saved_log["user_input"] == "RAGとは？"
+    assert saved_log["llm_answer"] == "完了"
+    assert saved_log["timestamp"] == logs[0].stem
+    assert len(saved_log["timestamp"]) == 15
+    assert saved_log["timestamp"][8] == "T"
+    assert saved_log["timestamp"].replace("T", "").isdigit()
+    assert [item["tool_name"] for item in saved_log["tool return"]] == [
+        "search_glossary"
+    ]
 
 
-def test_learning_log_is_not_saved_when_approval_is_denied(tmp_path, monkeypatch):
+def test_instructions_call_save_tool_after_other_tools_every_time():
+    assert (
+        "利用者が保存を頼んだかどうかにかかわらず、毎回 save_learning_log を呼ぶ。"
+        in INSTRUCTIONS
+    )
+    assert (
+        "save_learning_log は、必要な他のツールをすべて使い終えた後、"
+        "回答前の最後のツール呼び出しとして使う。"
+        in INSTRUCTIONS
+    )
+
+
+def test_learning_log_is_not_saved_when_post_response_approval_is_denied(
+    tmp_path, monkeypatch, capsys
+):
     from app import agent as agent_module, tools
 
     monkeypatch.setattr(tools, "LEARNING_LOG_DIR", tmp_path)
-    model = TestModel(call_tools=["save_learning_log"], custom_output_text="中止しました")
+    model = TestModel(call_tools=[], custom_output_text="中止しました")
     monkeypatch.setattr(agent_module, "build_model", lambda: model)
-    monkeypatch.setattr("builtins.input", lambda _: "n")
+
+    def deny_after_response(prompt):
+        assert "中止しました" in capsys.readouterr().out
+        assert "保存しますか" in prompt
+        return "n"
+
+    monkeypatch.setattr("builtins.input", deny_after_response)
     monkeypatch.setattr("sys.argv", ["app.agent", "このやりとりを保存して"])
 
     agent_module.main()

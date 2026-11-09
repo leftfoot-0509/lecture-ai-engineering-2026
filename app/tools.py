@@ -10,9 +10,6 @@ from datetime import datetime
 from functools import cache
 from pathlib import Path
 
-from pydantic_ai import RunContext
-from pydantic_ai.messages import ModelMessagesTypeAdapter
-
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 LEARNING_LOG_DIR = Path(__file__).resolve().parent.parent / "learning_log"
 MAX_RESULTS = 3
@@ -104,21 +101,32 @@ def make_quiz(lecture: int) -> str:
     )
 
 
-def save_learning_log(ctx: RunContext[object]) -> str:
-    """学習の記録を learning_log/ フォルダに保存する。
+def save_learning_log() -> str:
+    """必要な他のツールを使い終えた後、回答前の最後のツールとして必ず呼び出す。
 
-    利用者から会話の保存を頼まれたときに使う。現在までの利用者とLLMの
-    やりとりを保存する。保存前に利用者の確認を挟む。
+    利用者が保存を頼んでいない場合も呼び出す。このツール自体はファイルを書き込まず、
+    回答後に利用者へ保存を確認する。
     """
+    return "回答の後に利用者へ保存を確認します。"
+
+
+def write_learning_log(
+    user_input: str, llm_answer: str, tool_returns: list[dict[str, object]]
+) -> Path:
+    """利用者の入力、LLMの回答、ツールの戻り値を学習記録として保存する。"""
     LEARNING_LOG_DIR.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().astimezone().strftime("%Y%m%d-%H%M%S-%f%z")
+    now = datetime.now().astimezone()
+    timestamp = now.strftime("%Y%m%dT%H%M%S")
     path = LEARNING_LOG_DIR / f"{timestamp}.json"
-    content = ModelMessagesTypeAdapter.dump_json(
-        ctx.messages, indent=2, ensure_ascii=False
-    ).decode("utf-8")
+    content = {
+        "timestamp": timestamp,
+        "user_input": user_input,
+        "llm_answer": llm_answer,
+        "tool return": tool_returns,
+    }
 
     with path.open("x", encoding="utf-8") as f:
-        f.write(content)
+        json.dump(content, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
-    return f"やりとりを learning_log/{path.name} に保存しました。"
+    return path
