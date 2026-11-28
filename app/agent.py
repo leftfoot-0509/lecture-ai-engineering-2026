@@ -47,10 +47,11 @@ INSTRUCTIONS = """\
 - 用語集に見つからないことは、推測で断定せず「用語集にはない」と伝える。
 - 回答の最後に、関係する回（第N回）を示す。
 - 宿題の答えそのものは書かず、考え方のヒントで導く。
-- 利用者が保存を頼んだかどうかにかかわらず、毎回 save_learning_log を呼ぶ。
-- save_learning_log は、必要な他のツールをすべて使い終えた後、回答前の最後のツール呼び出しとして使う。
-- save_learning_log を呼んだ後に最終回答を返す。保存の確認は回答後に行われる。
 """
+#利用者が保存を頼んだかどうかにかかわらず、毎回 save_learning_log を呼ぶ。
+#save_learning_log は、必要な他のツールをすべて使い終えた後、回答前の最後のツール呼び出しとして使う。
+#save_learning_log を呼んだ後に最終回答を返す。保存の確認は回答後に行われる。
+
 
 TREE_INSTRUCTIONS = """\
 あなたはAIエンジニアリング講座（AIE2026）の学習支援エージェントです。
@@ -89,7 +90,7 @@ agent = Agent(instructions=INSTRUCTIONS)
 agent.tool_plain(tools.search_glossary)
 agent.tool_plain(tools.get_lecture_summary)
 agent.tool_plain(tools.make_quiz)
-agent.tool_plain(tools.save_learning_log)
+#agent.tool_plain(tools.save_learning_log)
 
 # 第5回: 使う MCP サーバーの設定ファイル。Claude Desktop や Cursor と同じ "mcpServers" 形式
 MCP_CONFIG = Path(__file__).resolve().parent / "mcp_servers.json"
