@@ -199,7 +199,6 @@ def main() -> None:
         mode = target.override(instructions=TREE_INSTRUCTIONS, tools=[tools.browse_tree])
     elif args.graph:
         mode = target.override(instructions=GRAPH_INSTRUCTIONS, tools=[tools.search_graph])
-
     with mode:
         if args.list_tools:
             if args.full_context:
@@ -208,7 +207,6 @@ def main() -> None:
             else:
                 print_tools(target)
             return
-
         if not args.question:
             parser.error("質問を指定してください")
 
@@ -221,35 +219,15 @@ def main() -> None:
             if args.full_context:
                 result = run_full_context(
                     target, args.question, build_model(),
-                    instructions=FULL_CONTEXT_INSTRUCTIONS,
-                    prompt_template=FULL_CONTEXT_PROMPT,
+                    instructions=FULL_CONTEXT_INSTRUCTIONS, prompt_template=FULL_CONTEXT_PROMPT,
                 )
             else:
                 result = target.run_sync(args.question, model=build_model())
         except ModelHTTPError as e:
             print(api_error_message(e.status_code, str(e.body)[:200]))
             raise SystemExit(1)
-
         elapsed_seconds = perf_counter() - started
-
         print(result.output)
-
-        answer = input("このやりとりを learning_log/ に保存しますか？ [y/N]: ").strip()
-        if answer == "y":
-            tool_returns = [
-                {"tool_name": part.tool_name, "content": part.content}
-                for message in result.all_messages()
-                for part in message.parts
-                if isinstance(part, ToolReturnPart)
-                and part.tool_name != "save_learning_log"
-            ]
-            path = tools.write_learning_log(
-                args.question,
-                result.output,
-                tool_returns,
-            )
-            print(f"やりとりを learning_log/{path.name} に保存しました。")
-
         if args.trace:
             print_trace(result, elapsed_seconds)
 
