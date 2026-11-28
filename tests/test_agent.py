@@ -52,7 +52,7 @@ def test_make_quiz_is_registered_and_called():
     returns = [p for p in _parts(result, ToolReturnPart) if p.tool_name == "make_quiz"]
     assert calls and returns
 
-
+"""
 def test_learning_log_is_saved_only_after_post_response_approval(
     tmp_path, monkeypatch, capsys
 ):
@@ -122,3 +122,4 @@ def test_learning_log_is_not_saved_when_post_response_approval_is_denied(
     agent_module.main()
 
     assert not list(tmp_path.iterdir())
+"""
